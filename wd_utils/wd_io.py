@@ -1,8 +1,9 @@
 from wd_containers import _ParameterContainer
+import os
 
 
 class _WDInput:
-    def __init__(self, container):
+    def __init__(self, container, wd_path=os.getcwd()):
         self._output = ""
         self.warning = ""
         self.error = ""
@@ -12,19 +13,49 @@ class _WDInput:
         self.parameters = container
 
     @staticmethod
-    def format_eccentricity(ipt):
+    def _format_eccentricity(ipt):
         if ipt >= 1.0 or ipt < 0.0:
             raise ValueError("Invalid eccentricity value: " + repr(ipt))
         else:
             output = "{:6.5f}".format(ipt)
             return output[1:]
 
+    def _format_spots(self):
+        def _format_spot(spt):
+            return spt["xlat"].format(9, 5, "F") + \
+                   spt["xlong"].format(9, 5, "F") + \
+                   spt["radsp"].format(9, 5, "F") + \
+                   spt["temsp"].format(9, 5, "F") + \
+                   spt["tstart"].format(14, 5, "F") + \
+                   spt["tmax1"].format(14, 5, "F") + \
+                   spt["tmax2"].format(14, 5, "F") + \
+                   spt["tfinal"].format(14, 5, "F") + "\n"
+
+        star1_spot_lines = ""
+        for spot in self.parameters.star1_spots:
+            star1_spot_lines = star1_spot_lines + _format_spot(spot)
+
+        star2_spot_lines = ""
+        for spot in self.parameters.star2_spots:
+            star2_spot_lines = star2_spot_lines + _format_spot(spot)
+
+        return star1_spot_lines, star2_spot_lines
+
+    def save(self):
+        return self
+
+    def __str__(self):
+        return self._output
+
 
 class LCInput(_WDInput):
     def __init__(self, container):
         _WDInput.__init__(self, container)
 
-    def _format_input(self, mpage, ktstep=0):
+    def run(self):
+        pass
+
+    def _fill_input(self, mpage, ktstep=0):
 
         self.parameters.check_values()
 
@@ -77,7 +108,7 @@ class LCInput(_WDInput):
                 self.parameters["the"].format(8, 5, "F") + \
                 self.parameters["vunit"].format(8, 2, "F") + "\n"
 
-        line5 = self.format_eccentricity(self.parameters["e"].get()) + \
+        line5 = self._format_eccentricity(self.parameters["e"].get()) + \
                 self.parameters["a"].format(13, 6, "D") + \
                 self.parameters["f1"].format(10, 4, "F") + \
                 self.parameters["f2"].format(10, 4, "F") + \
@@ -105,7 +136,7 @@ class LCInput(_WDInput):
 
         line7 = self.parameters["a3b"].format(12, 6, "D") + \
                 self.parameters["p3b"].format(14, 7, "D") + \
-                self.parameters["xinc3b"].format(11, 5, "F") + \
+                self.parameters["xincl3b"].format(11, 5, "F") + \
                 self.parameters["e3b"].format(9, 6, "F") + \
                 self.parameters["perr3b"].format(10, 7, "F") + \
                 self.parameters["tc3b"].format(17, 8, "F") + "\n"
@@ -157,30 +188,7 @@ class LCInput(_WDInput):
 
             star2_line_profiles = star2_line_profiles + "-1.\n"
 
-        star1_spots = ""
-        star2_spots = ""
-
-        for spot in self.parameters.star1_spots:
-            star1_spots = star1_spots + \
-                              spot["xlat"].format(9, 5, "F") + \
-                              spot["xlong"].format(9, 5, "F") + \
-                              spot["radsp"].format(9, 5, "F") + \
-                              spot["temsp"].format(9, 5, "F") + \
-                              spot["tstart"].format(14, 5, "F") + \
-                              spot["tmax1"].format(14, 5, "F") + \
-                              spot["tmax2"].format(14, 5, "F") + \
-                              spot["tfinal"].format(14, 5, "F") + "\n"
-
-        for spot in self.parameters.star2_spots:
-            star2_spots = star2_spots + \
-                              spot["xlat"].format(9, 5, "F") + \
-                              spot["xlong"].format(9, 5, "F") + \
-                              spot["radsp"].format(9, 5, "F") + \
-                              spot["temsp"].format(9, 5, "F") + \
-                              spot["tstart"].format(14, 5, "F") + \
-                              spot["tmax1"].format(14, 5, "F") + \
-                              spot["tmax2"].format(14, 5, "F") + \
-                              spot["tfinal"].format(14, 5, "F") + "\n"
+        star1_spots, star2_spots = self._format_spots()
 
         eclipse_data = ""
         if mpage == 6 and ktstep == 0:
@@ -211,31 +219,355 @@ class LCInput(_WDInput):
                 eclipse_data + \
                 "9"
 
-    def input_synthetic_light_curve(self):
-        self._format_input(1)
+        return self
 
-    def input_synthetic_velocity_curve(self):
-        self._format_input(2)
+    def fill_for_synthetic_light_curve(self):
+        return self._fill_input(1)
 
-    def input_spectral_lines(self):
-        self._format_input(3)
+    def fill_for_synthetic_velocity_curve(self):
+        return self._fill_input(2)
 
-    def input_component_dimensions(self):
-        self._format_input(4)
+    def fill_for_spectral_lines(self):
+        return self._fill_input(3)
 
-    def input_star_positions(self):
-        self._format_input(5)
+    def fill_for_component_dimensions(self):
+        return self._fill_input(4)
 
-    def input_etv(self):
-        self._format_input(6)
+    def fill_for_star_positions(self):
+        return self._fill_input(5)
 
-    def input_conjunction(self, ktstep):
-        self._format_input(6, ktstep=ktstep)
+    def fill_for_etv(self):
+        return self._fill_input(6)
 
-    def __str__(self):
-        return self._output
+    def fill_for_conjunction(self, ktstep):
+        return self._fill_input(6, ktstep=ktstep)
 
 
 class DCInput(_WDInput):
     def __init__(self, container):
         _WDInput.__init__(self, container)
+
+    def run(self):
+        pass
+
+    def fill_for_solution(self):
+        def _format_keeps(keep):
+            block1 = " " + keep["spot_a_lat"].format(1, 0, "") + \
+                     keep["spot_a_long"].format(1, 0, "") + \
+                     keep["spot_a_rad"].format(1, 0, "") + \
+                     keep["spot_a_tempf"].format(1, 0, "") + " "
+
+            block2 = keep["spot_b_lat"].format(1, 0, "") + \
+                     keep["spot_b_long"].format(1, 0, "") + \
+                     keep["spot_b_rad"].format(1, 0, "") + \
+                     keep["spot_b_tempf"].format(1, 0, "") + " "
+
+            block3 = keep["a"].format(1, 0, "") + \
+                     keep["e"].format(1, 0, "") + \
+                     keep["perr"].format(1, 0, "") + \
+                     keep["f1"].format(1, 0, "") + \
+                     keep["f2"].format(1, 0, "") + \
+                     keep["pshift"].format(1, 0, "") + \
+                     keep["vga"].format(1, 0, "") + " "
+
+            block4 = keep["xincl"].format(1, 0, "") + \
+                     keep["g1"].format(1, 0, "") + \
+                     keep["g2"].format(1, 0, "") + \
+                     keep["t1"].format(1, 0, "") + \
+                     keep["t2"].format(1, 0, "") + " "
+
+            block5 = keep["alb1"].format(1, 0, "") + \
+                     keep["alb2"].format(1, 0, "") + \
+                     keep["pot1"].format(1, 0, "") + \
+                     keep["pot2"].format(1, 0, "") + \
+                     keep["rm"].format(1, 0, "") + " "
+
+            block6 = keep["hjd0"].format(1, 0, "") + \
+                     keep["pzero"].format(1, 0, "") + \
+                     keep["dpdt"].format(1, 0, "") + \
+                     keep["dperdt"].format(1, 0, "") + \
+                     keep["a3b"].format(1, 0, "") + " "
+
+            block7 = keep["p3b"].format(1, 0, "") + \
+                     keep["i3b"].format(1, 0, "") + \
+                     keep["e3b"].format(1, 0, "") + \
+                     keep["perr3b"].format(1, 0, "") + \
+                     keep["t03b"].format(1, 0, "") + " "
+
+            block8 = "11111 "  # unused block
+
+            block9 = keep["dpclog"].format(1, 0, "") + \
+                     keep["desextinc"].format(1, 0, "") + \
+                     keep["spot_a_tstart"].format(1, 0, "") + \
+                     keep["spot_a_tmax1"].format(1, 0, "") + \
+                     keep["spot_a_tmax2"].format(1, 0, "") + " "
+
+            block10 = keep["spot_a_tend"].format(1, 0, "") + \
+                      keep["spot_b_tstart"].format(1, 0, "") + \
+                      keep["spot_b_tmax1"].format(1, 0, "") + \
+                      keep["spot_b_tmax2"].format(1, 0, "") + \
+                      keep["spot_b_tend"].format(1, 0, "") + " "
+
+            block11 = "11111 "  # unused block
+
+            block12 = keep["l1"].format(1, 0, "") + \
+                      keep["l2"].format(1, 0, "") + \
+                      keep["x1"].format(1, 0, "") + \
+                      keep["x2"].format(1, 0, "") + \
+                      keep["el3"].format(1, 0, "") + " "
+
+            block13 = keep["niter"].format(2, 0, "") + \
+                      keep["xlamda"].format(10, 3, "D") + \
+                      keep["vlr"].format(6, 3, "F") + "\n"
+
+            return block1 + block2 + block3 + block4 + block5 + \
+                   block6 + block7 + block8 + block9 + block10 + \
+                   block11 + block12 + block13
+
+        def _format_lc_vc_data(x, y, w):
+            data_line = ""
+
+            time_formatter = _ParameterContainer.Parameter("time", float)
+            observation_formatter = _ParameterContainer.Parameter("obs", float)
+            weight_formatter = _ParameterContainer.Parameter("weight", float)
+
+            for xyw in zip(x, y, w):
+                time_formatter.set(xyw[0])
+                observation_formatter.set(xyw[1])
+                weight_formatter.set(xyw[2])
+
+                data_line = data_line + \
+                            time_formatter.format(14, 5, "D") + \
+                            observation_formatter.format(11, 6, "D") + \
+                            weight_formatter.format(8, 3, "D") + "\n"
+
+            return data_line + "  -10001.00000\n"
+
+        def _format_velocity_curve(vc):
+            if vc is None:
+                return "", ""
+
+            else:
+                vc_info_line = vc["iband"].format(3, 0, "") + \
+                               vc["l1"].format(13, 6, "D") + \
+                               vc["l2"].format(13, 6, "D") + \
+                               vc["x1"].format(7, 3, "F") + \
+                               vc["x2"].format(7, 3, "F") + \
+                               vc["y1"].format(7, 3, "F") + \
+                               vc["y2"].format(7, 3, "F") + \
+                               vc["opsf"].format(10, 3, "D") + \
+                               vc["sigma"].format(12, 5, "D") + \
+                               vc["e1"].format(8, 5, "F") + \
+                               vc["e2"].format(8, 5, "F") + \
+                               vc["e3"].format(8, 5, "F") + \
+                               vc["e4"].format(8, 5, "F") + \
+                               vc["wla"].format(10, 6, "F") + \
+                               vc["ksd"].format(2, 0, "") + "\n"
+
+                x, y, w = vc.data["velocity_data"]
+
+                vc_data_line = _format_lc_vc_data(x, y, w)
+
+                return vc_info_line, vc_data_line
+
+        def _format_light_curve(lc):
+            if lc is None:
+                return "", "", ""
+
+            else:
+                lc_info_line = lc["iband"].format(3, 0, "") + \
+                               lc["l1"].format(13, 6, "D") + \
+                               lc["l2"].format(13, 6, "D") + \
+                               lc["x1"].format(7, 3, "F") + \
+                               lc["x2"].format(7, 3, "F") + \
+                               lc["y1"].format(7, 3, "F") + \
+                               lc["y2"].format(7, 3, "F") + \
+                               lc["opsf"].format(10, 3, "D") + \
+                               lc["sigma"].format(12, 5, "D") + \
+                               lc["e1"].format(8, 5, "F") + \
+                               lc["e2"].format(8, 5, "F") + \
+                               lc["e3"].format(8, 5, "F") + \
+                               lc["e4"].format(8, 5, "F") + \
+                               lc["wla"].format(10, 6, "F") + \
+                               lc["ksd"].format(2, 0, "") + "\n"
+
+                lc_extra_line = lc["wla"].format(9, 6, "F") + \
+                                lc["aextinc"].format(8, 4, "F") + \
+                                lc["xunit"].format(11, 4, "D") + \
+                                lc["calib"].format(12, 5, "D") + "\n"
+
+                x, y, w = lc.data["light_data"]
+
+                lc_data_line = _format_lc_vc_data(x, y, w)
+
+                return lc_info_line, lc_extra_line, lc_data_line
+
+        # all del's use same formatting
+        del_width = 7
+        del_precision = 4
+        del_exponent = "d"
+
+        del1 = " " + self.parameters.dels["spot_a_lat"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_a_long"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_a_rad"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_a_tempf"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_b_lat"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_b_long"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_b_rad"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["spot_b_tempf"].format(del_width, del_precision, del_exponent) + "\n"
+
+        del2 = " " + self.parameters.dels["a"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["e"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["perr"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["f1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["f2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["pshift"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["xincl"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["g1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["g2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["t1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["t2"].format(del_width, del_precision, del_exponent) + " " + "\n"
+
+        del3 = " " + self.parameters.dels["alb1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["alb2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["pot1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["pot2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["rm"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["l1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["l2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["x1"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["x2"].format(del_width, del_precision, del_exponent) + "\n"
+
+        keeps = _format_keeps(self.parameters.keeps)
+
+        line5 = self.parameters["kspa"].format(3, 0, "") + \
+                self.parameters["nspa"].format(3, 0, "") + \
+                self.parameters["kspb"].format(3, 0, "") + \
+                self.parameters["nspb"].format(3, 0, "") + "\n"
+
+        line6 = self.parameters["ifvc1"].format(1, 0, "") + " " + \
+                self.parameters["ifvc2"].format(1, 0, "") + " " + \
+                self.parameters["nlc"].format(2, 0, "") + \
+                self.parameters["iftime"].format(2, 0, "") + \
+                self.parameters["ko"].format(2, 0, "") + \
+                self.parameters["kdisk"].format(2, 0, "") + \
+                self.parameters["isym"].format(2, 0, "") + \
+                self.parameters["nppl"].format(2, 0, "") + \
+                self.parameters["ifder"].format(2, 0, "") + \
+                self.parameters["iflcin"].format(2, 0, "") + \
+                self.parameters["ifoc"].format(2, 0, "") + "\n"
+
+        line7 = self.parameters["nref"].format(1, 0, "") + " " + \
+                self.parameters["mref"].format(1, 0, "") + " " + \
+                self.parameters["ifsmv1"].format(1, 0, "") + " " + \
+                self.parameters["ifsmv2"].format(1, 0, "") + " " + \
+                self.parameters["icor1"].format(1, 0, "") + " " + \
+                self.parameters["icor2"].format(1, 0, "") + " " + \
+                self.parameters["if3b"].format(1, 0, "") + " " + \
+                self.parameters["ld1"].format(2, 0, "", signed=True) + " " +  \
+                self.parameters["ld2"].format(2, 0, "", signed=True) + " " +  \
+                self.parameters["kspev"].format(1, 0, "") + " " + \
+                self.parameters["kspot"].format(1, 0, "") + " " + \
+                self.parameters["nomax"].format(1, 0, "") + " " + \
+                self.parameters["ifcgs"].format(1, 0, "") + " " + \
+                self.parameters["maglite"].format(1, 0, "") + " " + \
+                self.parameters["linkext"].format(1, 0, "") + " " + \
+                self.parameters["desextinc"].format(7, 4, "F") + "\n"
+
+        line8 = self.parameters["jdphs"].format(1, 0, "") + \
+                self.parameters["hjd0"].format(15, 6, "F") + \
+                self.parameters["pzero"].format(17, 10, "D") + \
+                self.parameters["dpdt"].format(14, 6, "D") + \
+                self.parameters["pshift"].format(10, 4, "D") + \
+                self.parameters["delph"].format(8, 5, "F") + \
+                self.parameters["nga"].format(3, 0, "") + "\n"
+
+        line9 = self.parameters["mode"].format(2, 0, "") + \
+                self.parameters["ipb"].format(2, 0, "") + \
+                self.parameters["ifat1"].format(2, 0, "") + \
+                self.parameters["ifat2"].format(2, 0, "") + \
+                self.parameters["n1"].format(4, 0, "") + \
+                self.parameters["n2"].format(4, 0, "") + \
+                self.parameters["n1l"].format(4, 0, "") + \
+                self.parameters["n2l"].format(4, 0, "") + \
+                self.parameters["perr0"].format(13, 6, "F") + \
+                self.parameters["dperdt"].format(13, 5, "D") + \
+                self.parameters["the"].format(8, 5, "F") + \
+                self.parameters["vunit"].format(9, 3, "F") + "\n"
+
+        line10 = self._format_eccentricity(self.parameters["e"]) + \
+                 self.parameters["a"].format(13, 6, "D") + \
+                 self.parameters["f1"].format(10, 4, "F") + \
+                 self.parameters["f2"].format(10, 4, "F") + \
+                 self.parameters["vga"].format(10, 4, "F") + \
+                 self.parameters["xincl"].format(9, 3, "F") + \
+                 self.parameters["gr1"].format(7, 3, "F") + \
+                 self.parameters["gr2"].format(7, 3, "F") + \
+                 self.parameters["abunin"].format(7, 2, "F") + \
+                 self.parameters["fspot1"].format(10, 4, "F") + \
+                 self.parameters["fspot2"].format(10, 4, "F") + "\n"
+
+        tavh, tavc = self.parameters.get_temperatures()
+
+        line11 = tavh + tavc +\
+                 self.parameters["alb1"].format(7, 3, "F") + \
+                 self.parameters["alb2"].format(7, 3, "F") + \
+                 self.parameters["phsv"].format(13, 6, "D") + \
+                 self.parameters["pcsv"].format(13, 6, "D") + \
+                 self.parameters["rm"].format(13, 6, "D") + \
+                 self.parameters["xbol1"].format(7, 3, "F") + \
+                 self.parameters["xbol2"].format(7, 3, "F") + \
+                 self.parameters["ybol1"].format(7, 3, "F") + \
+                 self.parameters["ybol2"].format(7, 3, "F") + \
+                 self.parameters["dpclog"].format(9, 5, "F") + "\n"
+
+        line12 = self.parameters["a3b"].format(12, 6, "D") + \
+                 self.parameters["p3b"].format(14, 7, "D") + \
+                 self.parameters["xincl3b"].format(11, 5, "F") + \
+                 self.parameters["e3b"].format(9, 6, "F") + \
+                 self.parameters["perr3b"].format(10, 7, "F") + \
+                 self.parameters["tc3b"].format(17, 8, "F") + "\n"
+
+        star1_spots, star2_spots = self._format_spots()
+
+        vc1_line, vc1_data = _format_velocity_curve(self.parameters.velocity_curves[0])
+        vc2_line, vc2_data = _format_velocity_curve(self.parameters.velocity_curves[1])
+
+        lc_info_lines = ""
+        lc_extra_lines = ""
+        lc_data = ""
+        for lc_container in self.parameters.light_curves:
+            info, extra, data = _format_light_curve(lc_container)
+            lc_info_lines = lc_info_lines + info
+            lc_extra_lines = lc_extra_lines + extra
+            lc_data = lc_data + data
+
+        eclipse_line = ""
+        eclipse_data = ""
+        if self.parameters.eclipse_timings is not None:
+            eclipse_line = (" " * 82) + \
+                           self.parameters.eclipse_timings["sigma"].format() + \
+                           (" " * 32) + \
+                           self.parameters.eclipse_timings["ksd"].format() + "\n"
+
+            hjd_formatter = _ParameterContainer.Parameter("hjd", float)
+            type_formatter = _ParameterContainer.Parameter("type", int)
+            weights_formatter = _ParameterContainer.Parameter("weights", float)
+
+            for xyz in zip(self.parameters.eclipse_timings.data[""]):
+                hjd_formatter.set(xyz[0])
+                type_formatter.set(xyz[1])
+                weights_formatter.set(xyz[2])
+
+                eclipse_data = eclipse_data + \
+                               hjd_formatter.format(14, 5, "D") + \
+                               type_formatter.format(6, 0, "") + \
+                               weights_formatter.format(13, 3, "D") + "\n"
+
+            eclipse_data = eclipse_data + "  -10001.00000\n"
+
+        self._output = del1 + del2 + del3 + keeps + \
+                       line5 + line6 + line7 + line8 + line9 + line10 + line11 + line12 + \
+                       vc1_line + vc2_line + eclipse_line + lc_info_lines + \
+                       star1_spots + "300.00000\n" + star2_spots + "300.00000\n150.\n" + \
+                       vc1_data + vc2_data + lc_data + eclipse_data + " 2\n"\

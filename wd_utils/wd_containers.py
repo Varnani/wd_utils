@@ -237,7 +237,7 @@ class _CommonParameterContainer(_ParameterContainer):
         self._add_parameter("if3b", int)
         self._add_parameter("a3b", float)
         self._add_parameter("p3b", float)
-        self._add_parameter("xinc3b", float)
+        self._add_parameter("xincl3b", float)
         self._add_parameter("e3b", float)
         self._add_parameter("perr3b", float)
         self._add_parameter("tc3b", float)
@@ -468,7 +468,7 @@ class DCParameterContainer(_CommonParameterContainer):
         self._add_parameter("iftime", int, value=0)
         self._add_parameter("ko", int, value=0)
         self._add_parameter("kdisk", int, value=0)
-        self._add_parameter("isym ", int, value=1)
+        self._add_parameter("isym", int, value=1)
         self._add_parameter("nppl", int, value=1)
         self._add_parameter("ifder", int, value=1)
         self._add_parameter("iflcin", int, value=0)
@@ -487,15 +487,15 @@ class DCParameterContainer(_CommonParameterContainer):
         # DEL's, they are filled with default values from WD manual example
         dels = _ParameterContainer("DELs")
 
-        dels._add_parameter("spot1_lat", float, value=0.02)
-        dels._add_parameter("spot1_long", float, value=0.02)
-        dels._add_parameter("spot1_rad", float, value=0.001)
-        dels._add_parameter("spot1_tempf", float, value=0.02)
+        dels._add_parameter("spot_a_lat", float, value=0.02)
+        dels._add_parameter("spot_a_long", float, value=0.02)
+        dels._add_parameter("spot_a_rad", float, value=0.001)
+        dels._add_parameter("spot_a_tempf", float, value=0.02)
 
-        dels._add_parameter("spot2_lat", float, value=0.02)
-        dels._add_parameter("spot2_long", float, value=0.02)
-        dels._add_parameter("spot2_rad", float, value=0.001)
-        dels._add_parameter("spot2_tempf", float, value=0.02)
+        dels._add_parameter("spot_b_lat", float, value=0.02)
+        dels._add_parameter("spot_b_long", float, value=0.02)
+        dels._add_parameter("spot_b_rad", float, value=0.001)
+        dels._add_parameter("spot_b_tempf", float, value=0.02)
 
         dels._add_parameter("a", float, value=0.05)
         dels._add_parameter("e", float, value=0.001)
@@ -503,7 +503,7 @@ class DCParameterContainer(_CommonParameterContainer):
         dels._add_parameter("f1", float, value=0.01)
         dels._add_parameter("f2", float, value=0.01)
         dels._add_parameter("pshift", float, value=0.002)
-        dels._add_parameter("i", float, value=0.2)
+        dels._add_parameter("xincl", float, value=0.2)
         dels._add_parameter("g1", float, value=0.01)
         dels._add_parameter("g2", float, value=0.01)
         dels._add_parameter("t1", float, value=0.02)
@@ -547,7 +547,7 @@ class DCParameterContainer(_CommonParameterContainer):
         subset._add_parameter("f2", int, value=1)
         subset._add_parameter("pshift", int, value=1)
         subset._add_parameter("vga", int, value=1)
-        subset._add_parameter("incl", int, value=1)
+        subset._add_parameter("xincl", int, value=1)
         subset._add_parameter("g1", int, value=1)
         subset._add_parameter("g2", int, value=1)
         subset._add_parameter("t1", int, value=1)
@@ -563,12 +563,12 @@ class DCParameterContainer(_CommonParameterContainer):
         subset._add_parameter("dperdt", int, value=1)
         subset._add_parameter("a3b", int, value=1)
         subset._add_parameter("p3b", int, value=1)
-        subset._add_parameter("i3b", int, value=1)
+        subset._add_parameter("xincl3b", int, value=1)
         subset._add_parameter("e3b", int, value=1)
         subset._add_parameter("perr3b", int, value=1)
         subset._add_parameter("t03b", int, value=1)
         subset._add_parameter("dpclog", int, value=1)
-        subset._add_parameter("adesex", int, value=1)
+        subset._add_parameter("desextinc", int, value=1)
 
         subset._add_parameter("spot_a_tstart", int, value=1)
         subset._add_parameter("spot_a_tmax1", int, value=1)
@@ -641,7 +641,7 @@ class DCParameterContainer(_CommonParameterContainer):
 
     def add_velocity_curve(self, star, sigma, ksd, wla, times, observations, weights,
                            iband=7, hla=1, cla=1, x1a=0, x2a=0, y1a=0, y2a=0, opsfa=0,
-                           spha1=0.05, spha2=0.45, spha3=0.55, spha4=0.95, ):
+                           spha1=0.05, spha2=0.45, spha3=0.55, spha4=0.95):
 
         vc = _ParameterContainer("VelocityCurve")
 
