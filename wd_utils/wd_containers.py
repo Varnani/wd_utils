@@ -194,8 +194,8 @@ class _CommonParameterContainer(_ParameterContainer):
         self._add_parameter("xincl", float)
         self._add_parameter("tavh", float)
         self._add_parameter("tavc", float)
-        self._add_parameter("poth", float)
-        self._add_parameter("potc", float)
+        self._add_parameter("phsv", float)
+        self._add_parameter("pcsv", float)
         self._add_parameter("rm", float)
         self._add_parameter("perr0", float)
         self._add_parameter("dperdt", float)
@@ -271,19 +271,12 @@ class _CommonParameterContainer(_ParameterContainer):
 
     def get_temperatures(self):
 
-        tavh = self["tavh"].get()
-        tavc = self["tavc"].get()
+        tavh_n = self.Parameter("tavh_n", float, self["tavh"].get() / 10000.0)
+        tavc_n = self.Parameter("tavc_n", float, self["tavc"].get() / 10000.0)
 
-        self["tavh"] = tavh / 10000.0
-        self["tavc"] = tavc / 10000.0
-
-        tavh_n = self["tavh"].format(7, 4, "F")
-        tavc_n = self["tavc"].format(7, 4, "F")
-
-        self["tavh"] = tavh
-        self["tavc"] = tavc
-
-        return tavh_n, tavc_n
+        # below assumes dcin formatting
+        # this is actually F7.4, 1X, F7.4 in lcin file but should not matter either way
+        return tavh_n.format(7, 4, "F"), tavc_n.format(8, 4, "F")
 
     def __str__(self):
         output = _ParameterContainer.__str__(self) + "\n\nStar 1 spots:\n"
@@ -319,7 +312,7 @@ class LCParameterContainer(_CommonParameterContainer):
         # noise
         self._add_parameter("stdev", float)
         self._add_parameter("noise", int)
-        self._add_parameter("seed", float)
+        self._add_parameter("seed", float, value=138472375)
 
         # steps
         self._add_parameter("hjdst", float)
@@ -331,7 +324,7 @@ class LCParameterContainer(_CommonParameterContainer):
         self._add_parameter("phn", float, value=0.25)
 
         # temperature estimation params
-        self._add_parameter("phobs", float, value=0.75)
+        self._add_parameter("phobs", float)
         self._add_parameter("lsp", int)
         self._add_parameter("tobs", float)
 
@@ -348,17 +341,17 @@ class LCParameterContainer(_CommonParameterContainer):
         # synthetic curve params
         self.synthetic_curve = _ParameterContainer("SyntheticCurve")
         self.synthetic_curve._add_parameter("iband", int)
-        self.synthetic_curve._add_parameter("hl", float)
-        self.synthetic_curve._add_parameter("cl", float)
-        self.synthetic_curve._add_parameter("xh", float)
-        self.synthetic_curve._add_parameter("xc", float)
-        self.synthetic_curve._add_parameter("yh", float)
-        self.synthetic_curve._add_parameter("yc", float)
-        self.synthetic_curve._add_parameter("el3", float)
-        self.synthetic_curve._add_parameter("opsf", float)
+        self.synthetic_curve._add_parameter("hla", float)
+        self.synthetic_curve._add_parameter("cla", float)
+        self.synthetic_curve._add_parameter("x1a", float)
+        self.synthetic_curve._add_parameter("x2a", float)
+        self.synthetic_curve._add_parameter("y1a", float)
+        self.synthetic_curve._add_parameter("y2a", float)
+        self.synthetic_curve._add_parameter("el3a", float)
+        self.synthetic_curve._add_parameter("opsfa", float)
         self.synthetic_curve._add_parameter("zero", float)
         self.synthetic_curve._add_parameter("factor", float)
-        self.synthetic_curve._add_parameter("wl", float)
+        self.synthetic_curve._add_parameter("wla", float)
         self.synthetic_curve._add_parameter("aextinc", float)
         self.synthetic_curve._add_parameter("calib", float)
 
@@ -368,33 +361,33 @@ class LCParameterContainer(_CommonParameterContainer):
 
     def set_synthetic_curve(self, iband, hl, cl, xh, xc, yh, yc, el3, opsf, zero, factor, wl, aextinc, calib):
         self.synthetic_curve["iband"] = iband
-        self.synthetic_curve["hl"] = hl
-        self.synthetic_curve["cl"] = cl
-        self.synthetic_curve["xh"] = xh
-        self.synthetic_curve["xc"] = xc
-        self.synthetic_curve["yh"] = yh
-        self.synthetic_curve["yc"] = yc
-        self.synthetic_curve["el3"] = el3
-        self.synthetic_curve["opsf"] = opsf
+        self.synthetic_curve["hla"] = hl
+        self.synthetic_curve["cla"] = cl
+        self.synthetic_curve["x1a"] = xh
+        self.synthetic_curve["x2a"] = xc
+        self.synthetic_curve["y1a"] = yh
+        self.synthetic_curve["y2a"] = yc
+        self.synthetic_curve["el3a"] = el3
+        self.synthetic_curve["opsfa"] = opsf
         self.synthetic_curve["zero"] = zero
         self.synthetic_curve["factor"] = factor
-        self.synthetic_curve["wl"] = wl
+        self.synthetic_curve["wla"] = wl
         self.synthetic_curve["aextinc"] = aextinc
         self.synthetic_curve["calib"] = calib
 
     def set_dummy_synthetic_curve(self):
         self.synthetic_curve["iband"] = 7
-        self.synthetic_curve["hl"] = 1.0
-        self.synthetic_curve["cl"] = 1.0
-        self.synthetic_curve["xh"] = 0.0
-        self.synthetic_curve["xc"] = 0.0
-        self.synthetic_curve["yh"] = 0.0
-        self.synthetic_curve["yc"] = 0.0
-        self.synthetic_curve["el3"] = 0.0
-        self.synthetic_curve["opsf"] = 0.0
+        self.synthetic_curve["hla"] = 1.0
+        self.synthetic_curve["cla"] = 1.0
+        self.synthetic_curve["x1a"] = 0.0
+        self.synthetic_curve["x2a"] = 0.0
+        self.synthetic_curve["y1a"] = 0.0
+        self.synthetic_curve["y2a"] = 0.0
+        self.synthetic_curve["el3a"] = 0.0
+        self.synthetic_curve["opsfa"] = 0.0
         self.synthetic_curve["zero"] = 8.0
         self.synthetic_curve["factor"] = 1.0
-        self.synthetic_curve["wl"] = 0.55
+        self.synthetic_curve["wla"] = 0.55
         self.synthetic_curve["aextinc"] = 0.0
         self.synthetic_curve["calib"] = 0.0
 
@@ -461,7 +454,7 @@ class DCParameterContainer(_CommonParameterContainer):
         self.reset_keeps()
 
     def _populate_dc_parameters(self):
-        # general params
+        # general dc params
         self._add_parameter("ifvc1", int, value=0)
         self._add_parameter("ifvc2", int, value=0)
         self._add_parameter("nlc", int, value=0)
@@ -476,6 +469,8 @@ class DCParameterContainer(_CommonParameterContainer):
         self._add_parameter("maglite", int, value=None)
         self._add_parameter("linkext", int, value=None)
         self._add_parameter("desextinc", float, value=None)
+        self._add_parameter("n1l", int, value=None)
+        self._add_parameter("n2l", int, value=None)
 
         # which spots to fit?
         self._add_parameter("kspa", int, value=0)
@@ -506,18 +501,18 @@ class DCParameterContainer(_CommonParameterContainer):
         dels._add_parameter("xincl", float, value=0.2)
         dels._add_parameter("g1", float, value=0.01)
         dels._add_parameter("g2", float, value=0.01)
-        dels._add_parameter("t1", float, value=0.02)
-        dels._add_parameter("t2", float, value=0.02)
+        dels._add_parameter("tavh", float, value=0.02)
+        dels._add_parameter("tavc", float, value=0.02)
 
         dels._add_parameter("alb1", float, value=0.05)
         dels._add_parameter("alb2", float, value=0.05)
-        dels._add_parameter("pot1", float, value=0.02)
-        dels._add_parameter("pot2", float, value=0.02)
+        dels._add_parameter("phsv", float, value=0.02)
+        dels._add_parameter("pcsv", float, value=0.02)
         dels._add_parameter("rm", float, value=0.003)
-        dels._add_parameter("l1", float, value=0.01)
-        dels._add_parameter("l2", float, value=0.01)
-        dels._add_parameter("x1", float, value=0.01)
-        dels._add_parameter("x2", float, value=0.01)
+        dels._add_parameter("hla", float, value=0.01)
+        dels._add_parameter("cla", float, value=0.01)
+        dels._add_parameter("x1a", float, value=0.01)
+        dels._add_parameter("x2a", float, value=0.01)
 
         self.dels = dels
 
@@ -550,12 +545,12 @@ class DCParameterContainer(_CommonParameterContainer):
         subset._add_parameter("xincl", int, value=1)
         subset._add_parameter("g1", int, value=1)
         subset._add_parameter("g2", int, value=1)
-        subset._add_parameter("t1", int, value=1)
-        subset._add_parameter("t2", int, value=1)
+        subset._add_parameter("tavc", int, value=1)
+        subset._add_parameter("tavh", int, value=1)
         subset._add_parameter("alb1", int, value=1)
         subset._add_parameter("alb2", int, value=1)
-        subset._add_parameter("pot1", int, value=1)
-        subset._add_parameter("pot2", int, value=1)
+        subset._add_parameter("phsv", int, value=1)
+        subset._add_parameter("pcsv", int, value=1)
         subset._add_parameter("rm", int, value=1)
         subset._add_parameter("hjd0", int, value=1)
         subset._add_parameter("pzero", int, value=1)
@@ -580,11 +575,11 @@ class DCParameterContainer(_CommonParameterContainer):
         subset._add_parameter("spot_b_tmax2", int, value=1)
         subset._add_parameter("spot_b_tend", int, value=1)
 
-        subset._add_parameter("l1", int, value=1)
-        subset._add_parameter("l2", int, value=1)
-        subset._add_parameter("x1", int, value=1)
-        subset._add_parameter("x2", int, value=1)
-        subset._add_parameter("el3", int, value=1)
+        subset._add_parameter("hla", int, value=1)
+        subset._add_parameter("cla", int, value=1)
+        subset._add_parameter("x1a", int, value=1)
+        subset._add_parameter("x2a", int, value=1)
+        subset._add_parameter("el3a", int, value=1)
 
         # iteration params
         subset._add_parameter("niter", int, value=1)
@@ -614,14 +609,14 @@ class DCParameterContainer(_CommonParameterContainer):
         lc._add_parameter("y2a", float, value=y2a)
         lc._add_parameter("opsfa", float, value=opsfa)
         lc._add_parameter("sigma", float, value=sigma)
-        lc._add_parameter("shpa1", float, value=spha1)
-        lc._add_parameter("spha2", float, value=spha2)
-        lc._add_parameter("spha3", float, value=spha3)
-        lc._add_parameter("spha4", float, value=spha4)
+        lc._add_parameter("sphas1", float, value=spha1)
+        lc._add_parameter("sphas2", float, value=spha2)
+        lc._add_parameter("sphas3", float, value=spha3)
+        lc._add_parameter("sphas4", float, value=spha4)
         lc._add_parameter("ksd", float, value=ksd)
         lc._add_parameter("wla", float, value=wla)
         lc._add_parameter("el3a", float, value=el3a)
-        lc._add_parameter("noise", float, value=noise)
+        lc._add_parameter("noise", int, value=noise)
         lc._add_parameter("aextinc", float, value=aextinc)
         lc._add_parameter("xunit", float, value=xunit)
         lc._add_parameter("calib", float, value=calib)
@@ -654,10 +649,10 @@ class DCParameterContainer(_CommonParameterContainer):
         vc._add_parameter("y2a", float, value=y2a)
         vc._add_parameter("opsfa", float, value=opsfa)
         vc._add_parameter("sigma", float, value=sigma)
-        vc._add_parameter("shpa1", float, value=spha1)
-        vc._add_parameter("spha2", float, value=spha2)
-        vc._add_parameter("spha3", float, value=spha3)
-        vc._add_parameter("spha4", float, value=spha4)
+        vc._add_parameter("sphas1", float, value=spha1)
+        vc._add_parameter("sphas2", float, value=spha2)
+        vc._add_parameter("sphas3", float, value=spha3)
+        vc._add_parameter("sphas4", float, value=spha4)
         vc._add_parameter("ksd", float, value=ksd)
         vc._add_parameter("wla", float, value=wla)
 

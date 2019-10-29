@@ -2,18 +2,34 @@ from wd_containers import _ParameterContainer
 import os
 
 
-class _WDInput:
+class _WDIO:
     def __init__(self, container, wd_path=os.getcwd()):
-        self._output = ""
+        self.parameters = container
+        self._input = ""
+        self._cwd = wd_path
+        self._type = ""
+
+        # TODO implement error checking for common input errors
         self.warning = ""
         self.error = ""
         self.has_warning = False
         self.has_error = False
 
-        self.parameters = container
+    def save(self, path=None):
+        if path is None:
+            path = os.path.join(self._cwd, self._type + "in.active")
+        with open(path, "w") as output:
+            output.write(self._input)
+
+    def set_working_directory(self, path):
+        self._cwd = path
+
+    def run(self):
+        pass
 
     @staticmethod
     def _format_eccentricity(ipt):
+        ipt = float(ipt.get())
         if ipt >= 1.0 or ipt < 0.0:
             raise ValueError("Invalid eccentricity value: " + repr(ipt))
         else:
@@ -41,19 +57,14 @@ class _WDInput:
 
         return star1_spot_lines, star2_spot_lines
 
-    def save(self):
-        return self
-
     def __str__(self):
-        return self._output
+        return self._input
 
 
-class LCInput(_WDInput):
+class LCIO(_WDIO):
     def __init__(self, container):
-        _WDInput.__init__(self, container)
-
-    def run(self):
-        pass
+        _WDIO.__init__(self, container)
+        self._type = "lc"
 
     def _fill_input(self, mpage, ktstep=0):
 
@@ -108,7 +119,7 @@ class LCInput(_WDInput):
                 self.parameters["the"].format(8, 5, "F") + \
                 self.parameters["vunit"].format(8, 2, "F") + "\n"
 
-        line5 = self._format_eccentricity(self.parameters["e"].get()) + \
+        line5 = self._format_eccentricity(self.parameters["e"]) + \
                 self.parameters["a"].format(13, 6, "D") + \
                 self.parameters["f1"].format(10, 4, "F") + \
                 self.parameters["f2"].format(10, 4, "F") + \
@@ -125,8 +136,8 @@ class LCInput(_WDInput):
         line6 = tavh + " " + tavc + \
                 self.parameters["alb1"].format(7, 3, "F") + \
                 self.parameters["alb2"].format(7, 3, "F") + \
-                self.parameters["poth"].format(13, 6, "D") + \
-                self.parameters["potc"].format(13, 6, "D") + \
+                self.parameters["phsv"].format(13, 6, "D") + \
+                self.parameters["pcsv"].format(13, 6, "D") + \
                 self.parameters["rm"].format(13, 6, "D") + \
                 self.parameters["xbol1"].format(7, 3, "F") + \
                 self.parameters["xbol2"].format(7, 3, "F") + \
@@ -142,17 +153,17 @@ class LCInput(_WDInput):
                 self.parameters["tc3b"].format(17, 8, "F") + "\n"
 
         line8 = self.parameters.synthetic_curve["iband"].format(3, 0, "") + \
-                self.parameters.synthetic_curve["hl"].format(13, 7, "D") + \
-                self.parameters.synthetic_curve["cl"].format(13, 7, "D") + \
-                self.parameters.synthetic_curve["xh"].format(7, 3, "F") + \
-                self.parameters.synthetic_curve["xc"].format(7, 3, "F") + \
-                self.parameters.synthetic_curve["yh"].format(7, 3, "F") + \
-                self.parameters.synthetic_curve["yc"].format(7, 3, "F") + \
-                self.parameters.synthetic_curve["el3"].format(12, 4, "D") + \
-                self.parameters.synthetic_curve["opsf"].format(11, 4, "D") + \
+                self.parameters.synthetic_curve["hla"].format(13, 7, "D") + \
+                self.parameters.synthetic_curve["cla"].format(13, 7, "D") + \
+                self.parameters.synthetic_curve["x1a"].format(7, 3, "F") + \
+                self.parameters.synthetic_curve["x2a"].format(7, 3, "F") + \
+                self.parameters.synthetic_curve["y1a"].format(7, 3, "F") + \
+                self.parameters.synthetic_curve["y2a"].format(7, 3, "F") + \
+                self.parameters.synthetic_curve["el3a"].format(12, 4, "D") + \
+                self.parameters.synthetic_curve["opsfa"].format(11, 4, "D") + \
                 self.parameters.synthetic_curve["zero"].format(8, 3, "F") + \
                 self.parameters.synthetic_curve["factor"].format(8, 4, "F") + \
-                self.parameters.synthetic_curve["wl"].format(10, 6, "F") + \
+                self.parameters.synthetic_curve["wla"].format(10, 6, "F") + \
                 self.parameters.synthetic_curve["aextinc"].format(8, 4, "F") + \
                 self.parameters.synthetic_curve["calib"].format(12, 5, "D") + "\n"
 
@@ -209,7 +220,7 @@ class LCInput(_WDInput):
 
             eclipse_data = eclipse_data + "-10000.\n"
 
-        self._output = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + \
+        self._input = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + \
                 star1_line_profiles + star2_line_profiles + \
                 star1_spots + \
                 "300.00000  0.00000  0.00000  0.00000       0.00000       0.00000       0.00000       0.00000\n" + \
@@ -243,12 +254,10 @@ class LCInput(_WDInput):
         return self._fill_input(6, ktstep=ktstep)
 
 
-class DCInput(_WDInput):
+class DCIO(_WDIO):
     def __init__(self, container):
-        _WDInput.__init__(self, container)
-
-    def run(self):
-        pass
+        _WDIO.__init__(self, container)
+        self._type = "dc"
 
     def fill_for_solution(self):
         def _format_keeps(keep):
@@ -273,13 +282,13 @@ class DCInput(_WDInput):
             block4 = keep["xincl"].format(1, 0, "") + \
                      keep["g1"].format(1, 0, "") + \
                      keep["g2"].format(1, 0, "") + \
-                     keep["t1"].format(1, 0, "") + \
-                     keep["t2"].format(1, 0, "") + " "
+                     keep["tavh"].format(1, 0, "") + \
+                     keep["tavc"].format(1, 0, "") + " "
 
             block5 = keep["alb1"].format(1, 0, "") + \
                      keep["alb2"].format(1, 0, "") + \
-                     keep["pot1"].format(1, 0, "") + \
-                     keep["pot2"].format(1, 0, "") + \
+                     keep["phsv"].format(1, 0, "") + \
+                     keep["pcsv"].format(1, 0, "") + \
                      keep["rm"].format(1, 0, "") + " "
 
             block6 = keep["hjd0"].format(1, 0, "") + \
@@ -289,7 +298,7 @@ class DCInput(_WDInput):
                      keep["a3b"].format(1, 0, "") + " "
 
             block7 = keep["p3b"].format(1, 0, "") + \
-                     keep["i3b"].format(1, 0, "") + \
+                     keep["xincl3b"].format(1, 0, "") + \
                      keep["e3b"].format(1, 0, "") + \
                      keep["perr3b"].format(1, 0, "") + \
                      keep["t03b"].format(1, 0, "") + " "
@@ -310,11 +319,11 @@ class DCInput(_WDInput):
 
             block11 = "11111 "  # unused block
 
-            block12 = keep["l1"].format(1, 0, "") + \
-                      keep["l2"].format(1, 0, "") + \
-                      keep["x1"].format(1, 0, "") + \
-                      keep["x2"].format(1, 0, "") + \
-                      keep["el3"].format(1, 0, "") + " "
+            block12 = keep["hla"].format(1, 0, "") + \
+                      keep["cla"].format(1, 0, "") + \
+                      keep["x1a"].format(1, 0, "") + \
+                      keep["x2a"].format(1, 0, "") + \
+                      keep["el3a"].format(1, 0, "") + " "
 
             block13 = keep["niter"].format(2, 0, "") + \
                       keep["xlamda"].format(10, 3, "D") + \
@@ -349,18 +358,18 @@ class DCInput(_WDInput):
 
             else:
                 vc_info_line = vc["iband"].format(3, 0, "") + \
-                               vc["l1"].format(13, 6, "D") + \
-                               vc["l2"].format(13, 6, "D") + \
-                               vc["x1"].format(7, 3, "F") + \
-                               vc["x2"].format(7, 3, "F") + \
-                               vc["y1"].format(7, 3, "F") + \
-                               vc["y2"].format(7, 3, "F") + \
-                               vc["opsf"].format(10, 3, "D") + \
+                               vc["hla"].format(13, 6, "D") + \
+                               vc["cla"].format(13, 6, "D") + \
+                               vc["x1a"].format(7, 3, "F") + \
+                               vc["x2a"].format(7, 3, "F") + \
+                               vc["y1a"].format(7, 3, "F") + \
+                               vc["y2a"].format(7, 3, "F") + \
+                               vc["opsfa"].format(10, 3, "D") + \
                                vc["sigma"].format(12, 5, "D") + \
-                               vc["e1"].format(8, 5, "F") + \
-                               vc["e2"].format(8, 5, "F") + \
-                               vc["e3"].format(8, 5, "F") + \
-                               vc["e4"].format(8, 5, "F") + \
+                               vc["sphas1"].format(8, 5, "F") + \
+                               vc["sphas2"].format(8, 5, "F") + \
+                               vc["sphas3"].format(8, 5, "F") + \
+                               vc["sphas4"].format(8, 5, "F") + \
                                vc["wla"].format(10, 6, "F") + \
                                vc["ksd"].format(2, 0, "") + "\n"
 
@@ -376,19 +385,20 @@ class DCInput(_WDInput):
 
             else:
                 lc_info_line = lc["iband"].format(3, 0, "") + \
-                               lc["l1"].format(13, 6, "D") + \
-                               lc["l2"].format(13, 6, "D") + \
-                               lc["x1"].format(7, 3, "F") + \
-                               lc["x2"].format(7, 3, "F") + \
-                               lc["y1"].format(7, 3, "F") + \
-                               lc["y2"].format(7, 3, "F") + \
-                               lc["opsf"].format(10, 3, "D") + \
+                               lc["hla"].format(13, 6, "D") + \
+                               lc["cla"].format(13, 6, "D") + \
+                               lc["x1a"].format(7, 3, "F") + \
+                               lc["x2a"].format(7, 3, "F") + \
+                               lc["y1a"].format(7, 3, "F") + \
+                               lc["y2a"].format(7, 3, "F") + \
+                               lc["el3a"].format(12, 4, "D") + \
+                               lc["opsfa"].format(10, 3, "D") + \
+                               lc["noise"].format(2, 0, "") + \
                                lc["sigma"].format(12, 5, "D") + \
-                               lc["e1"].format(8, 5, "F") + \
-                               lc["e2"].format(8, 5, "F") + \
-                               lc["e3"].format(8, 5, "F") + \
-                               lc["e4"].format(8, 5, "F") + \
-                               lc["wla"].format(10, 6, "F") + \
+                               lc["sphas1"].format(8, 5, "F") + \
+                               lc["sphas2"].format(8, 5, "F") + \
+                               lc["sphas3"].format(8, 5, "F") + \
+                               lc["sphas4"].format(8, 5, "F") + \
                                lc["ksd"].format(2, 0, "") + "\n"
 
                 lc_extra_line = lc["wla"].format(9, 6, "F") + \
@@ -425,18 +435,18 @@ class DCInput(_WDInput):
                 self.parameters.dels["xincl"].format(del_width, del_precision, del_exponent) + " " + \
                 self.parameters.dels["g1"].format(del_width, del_precision, del_exponent) + " " + \
                 self.parameters.dels["g2"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["t1"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["t2"].format(del_width, del_precision, del_exponent) + " " + "\n"
+                self.parameters.dels["tavh"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["tavc"].format(del_width, del_precision, del_exponent) + " " + "\n"
 
         del3 = " " + self.parameters.dels["alb1"].format(del_width, del_precision, del_exponent) + " " + \
                 self.parameters.dels["alb2"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["pot1"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["pot2"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["phsv"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["pcsv"].format(del_width, del_precision, del_exponent) + " " + \
                 self.parameters.dels["rm"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["l1"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["l2"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["x1"].format(del_width, del_precision, del_exponent) + " " + \
-                self.parameters.dels["x2"].format(del_width, del_precision, del_exponent) + "\n"
+                self.parameters.dels["hla"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["cla"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["x1a"].format(del_width, del_precision, del_exponent) + " " + \
+                self.parameters.dels["x2a"].format(del_width, del_precision, del_exponent) + "\n"
 
         keeps = _format_keeps(self.parameters.keeps)
 
@@ -530,16 +540,16 @@ class DCInput(_WDInput):
 
         star1_spots, star2_spots = self._format_spots()
 
-        vc1_line, vc1_data = _format_velocity_curve(self.parameters.velocity_curves[0])
-        vc2_line, vc2_data = _format_velocity_curve(self.parameters.velocity_curves[1])
+        vc1_dependent_line, vc1_data = _format_velocity_curve(self.parameters.velocity_curves[0])
+        vc2_dependent_line, vc2_data = _format_velocity_curve(self.parameters.velocity_curves[1])
 
-        lc_info_lines = ""
-        lc_extra_lines = ""
+        lc_dependent_lines = ""
+        lc_extra_dependent_lines = ""
         lc_data = ""
         for lc_container in self.parameters.light_curves:
             info, extra, data = _format_light_curve(lc_container)
-            lc_info_lines = lc_info_lines + info
-            lc_extra_lines = lc_extra_lines + extra
+            lc_dependent_lines = lc_dependent_lines + info
+            lc_extra_dependent_lines = lc_extra_dependent_lines + extra
             lc_data = lc_data + data
 
         eclipse_line = ""
@@ -566,8 +576,15 @@ class DCInput(_WDInput):
 
             eclipse_data = eclipse_data + "  -10001.00000\n"
 
-        self._output = del1 + del2 + del3 + keeps + \
+        subset_line = ""
+        for subset in self.parameters.subsets:
+            subset_line = subset_line + _format_keeps(subset)
+
+        self._input = del1 + del2 + del3 + keeps + \
                        line5 + line6 + line7 + line8 + line9 + line10 + line11 + line12 + \
-                       vc1_line + vc2_line + eclipse_line + lc_info_lines + \
+                       vc1_dependent_line + vc2_dependent_line + lc_dependent_lines + \
+                       eclipse_line + lc_extra_dependent_lines + \
                        star1_spots + "300.00000\n" + star2_spots + "300.00000\n150.\n" + \
-                       vc1_data + vc2_data + lc_data + eclipse_data + " 2\n"\
+                       vc1_data + vc2_data + lc_data + eclipse_data + subset_line + " 2\n"\
+
+        return self
