@@ -1,13 +1,16 @@
 from wd_containers import _ParameterContainer
 import os
+import subprocess32
 
 
 class _WDIO:
-    def __init__(self, container, wd_path=os.getcwd()):
+    def __init__(self, container, wd_path, lc_binary_name, dc_binary_name):
         self.parameters = container
         self._input = ""
         self._cwd = wd_path
         self._type = ""
+        self._lc_binary_name = lc_binary_name
+        self._dc_binary_name = dc_binary_name
 
         # TODO implement error checking for common input errors
         self.warning = ""
@@ -15,17 +18,33 @@ class _WDIO:
         self.has_warning = False
         self.has_error = False
 
-    def save(self, path=None):
-        if path is None:
-            path = os.path.join(self._cwd, self._type + "in.active")
-        with open(path, "w") as output:
-            output.write(self._input)
-
     def set_working_directory(self, path):
         self._cwd = path
 
+    def _get_input_path(self):
+        return os.path.join(self._cwd, self._type + "in.active")
+
+    def _get_output_path(self):
+        return os.path.join(self._cwd, self._type + "out.active")
+
+    def save(self):
+        with open(self._get_input_path(), "w") as output:
+            output.write(self._input)
+        return self
+
     def run(self):
-        pass
+        cmd = ""
+        if self._type == "lc":
+            cmd = os.path.join(self._cwd, self._lc_binary_name)
+        elif self._type == "dc":
+            cmd = os.path.join(self._cwd, self._dc_binary_name)
+
+        if os.path.isfile(cmd):
+            proc = subprocess32.Popen(cmd, cwd=self._cwd)
+            proc.wait()
+            return self
+        else:
+            raise IOError("Cannot find WD binary:\n" + cmd)
 
     @staticmethod
     def _format_eccentricity(ipt):
@@ -57,13 +76,92 @@ class _WDIO:
 
         return star1_spot_lines, star2_spot_lines
 
+    @staticmethod
+    def _slice_with_splitmap(string, splitmap):
+        if splitmap[0] != 0:
+            splitmap.insert(0, 0)
+        temp_line = []
+        i = 0
+        while i < len(splitmap) - 1:
+            value = string[splitmap[i]:splitmap[i + 1]]
+            value = value.rstrip(" ")
+            value = value.strip(" ")
+            temp_line.append(value)
+            i = i + 1
+
+        return temp_line
+
+    @staticmethod
+    def _tidy_table(table):
+        if len(table) == 0:
+            return []
+        columns = [[] for _ in table[0]]
+        for line in table:
+            for index, data in enumerate(line):
+                columns[index].append(float(data))
+        return columns
+
+    @staticmethod
+    def _read_table(source, header, offset=1, occurence=1, splitmap=None, terminator="\n"):
+        table = []
+        flag = False
+        start = 0
+        occured = 0
+        with open(source, "r") as src:
+            for line in src:
+                if header in line:
+                    occured = occured + 1
+                    if occured == occurence:
+                        flag = True
+                if flag is True:
+                    if start < offset:
+                        start = start + 1
+                    else:
+                        if line == terminator:
+                            break
+                        else:
+                            if splitmap is not None:
+                                table.append(_WDIO._slice_with_splitmap(line, splitmap))
+                            else:
+                                table.append(line.split())
+        return _WDIO._tidy_table(table)
+
+    @staticmethod
+    def _read_all_tables(source, header, offset=1, splitmap=None, terminator=""):
+        with open(source, "r") as src:
+            splitted_source = src.read().split(header)
+
+        if len(splitted_source) == 1:
+            return []
+
+        splitted_source.pop(0)  # we dont care about prior data
+        tables = []
+
+        for segment in splitted_source:
+            splitted_segment = segment.split("\n")
+            current_offset = 0
+            while offset > current_offset:
+                splitted_segment.pop(0)
+                current_offset = current_offset + 1
+            table = []
+            for line in splitted_segment:
+                if line == terminator:
+                    break
+                else:
+                    if splitmap is not None:
+                        table.append(_WDIO._slice_with_splitmap(line, splitmap))
+                    else:
+                        table.append(line.split())
+            tables.append(_WDIO._tidy_table(table))
+        return tables
+
     def __str__(self):
         return self._input
 
 
 class LCIO(_WDIO):
-    def __init__(self, container):
-        _WDIO.__init__(self, container)
+    def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
+        _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
         self._type = "lc"
 
     def _fill_input(self, mpage, ktstep=0):
@@ -253,10 +351,58 @@ class LCIO(_WDIO):
     def fill_for_conjunction(self, ktstep):
         return self._fill_input(6, ktstep=ktstep)
 
+    def read_synthetic_light_curve(self):
+        results = self._read_table(self._get_output_path(),
+                                   "      JD               Phase     light 1       light 2")
+
+        return results
+
+    def read_synthetic_velocity_curve(self):
+        results = self._read_table(self._get_output_path(),
+                                   "      JD              Phase     V Rad 1")
+
+        return results
+
+    def read_spectral_lines(self):
+        star1_spec_lines = self._read_all_tables(self._get_output_path(),
+                                                 "                              star 1\n",
+                                                 offset=2)
+        star2_spec_lines = self._read_all_tables(self._get_output_path(),
+                                                 "                              star 2\n",
+                                                 offset=2)
+
+        return star1_spec_lines, star2_spec_lines
+
+    def read_component_dimensions(self):
+        results = self._read_table(self._get_output_path(),
+                                   "      JD             Phase     r1pol      r1pt")
+
+        return results
+
+    def read_star_positions(self):
+        results = self._read_all_tables(self._get_output_path(),
+                                        "   Y Sky Coordinate    Z Sky Coordinate\n")
+
+        return results
+
+    def read_etv(self):
+        results = self._read_table(self._get_output_path(),
+                                   "eclipse timing   type         wt.",
+                                   offset=2)
+
+        return results
+
+    def read_conjunction(self):
+        results = self._read_table(self._get_output_path(),
+                                   "conj. time   type         wt.",
+                                   offset=2)
+
+        return results
+
 
 class DCIO(_WDIO):
-    def __init__(self, container):
-        _WDIO.__init__(self, container)
+    def __init__(self, container, wd_path=os.getcwd()):
+        _WDIO.__init__(self, container, wd_path=wd_path)
         self._type = "dc"
 
     def fill_for_solution(self):
@@ -588,3 +734,22 @@ class DCIO(_WDIO):
                        vc1_data + vc2_data + lc_data + eclipse_data + subset_line + " 2\n"\
 
         return self
+
+    def read_results(self):
+        results = self._read_table(self._get_output_path(),
+                                   "Input-Output in D Format",
+                                   offset=3,
+                                   splitmap=[5, 9, 28, 46, 65, 83],
+                                   occurence=self.parameters.keeps["niter"].get())
+
+        return results
+
+    def read_solution_stats(self, ):
+        stats = self._read_table(self._get_output_path(),
+                                 "   Mean residual for input values",
+                                 occurence=self.parameters.keeps["niter"].get())
+
+        return stats
+
+    def update_from_results(self):
+        raise NotImplementedError
