@@ -352,16 +352,14 @@ class LCIO(_WDIO):
         return self._fill_input(6, ktstep=ktstep)
 
     def read_synthetic_light_curve(self):
-        results = self._read_table(self._get_output_path(),
-                                   "      JD               Phase     light 1       light 2")
-
-        return results
+        lc = self._read_table(self._get_output_path(),
+                              "      JD               Phase     light 1       light 2")
+        return lc
 
     def read_synthetic_velocity_curve(self):
-        results = self._read_table(self._get_output_path(),
-                                   "      JD              Phase     V Rad 1")
-
-        return results
+        vc = self._read_table(self._get_output_path(),
+                              "      JD              Phase     V Rad 1")
+        return vc
 
     def read_spectral_lines(self):
         star1_spec_lines = self._read_all_tables(self._get_output_path(),
@@ -370,39 +368,34 @@ class LCIO(_WDIO):
         star2_spec_lines = self._read_all_tables(self._get_output_path(),
                                                  "                              star 2\n",
                                                  offset=2)
-
         return star1_spec_lines, star2_spec_lines
 
     def read_component_dimensions(self):
-        results = self._read_table(self._get_output_path(),
-                                   "      JD             Phase     r1pol      r1pt")
-
-        return results
+        dimensions = self._read_table(self._get_output_path(),
+                                      "      JD             Phase     r1pol      r1pt")
+        return dimensions
 
     def read_star_positions(self):
-        results = self._read_all_tables(self._get_output_path(),
-                                        "   Y Sky Coordinate    Z Sky Coordinate\n")
-
-        return results
+        positions = self._read_all_tables(self._get_output_path(),
+                                          "   Y Sky Coordinate    Z Sky Coordinate\n")
+        return positions
 
     def read_etv(self):
-        results = self._read_table(self._get_output_path(),
-                                   "eclipse timing   type         wt.",
-                                   offset=2)
-
-        return results
+        etv = self._read_table(self._get_output_path(),
+                               "eclipse timing   type         wt.",
+                               offset=2)
+        return etv
 
     def read_conjunction(self):
-        results = self._read_table(self._get_output_path(),
-                                   "conj. time   type         wt.",
-                                   offset=2)
-
-        return results
+        conjunction = self._read_table(self._get_output_path(),
+                                       "conj. time   type         wt.",
+                                       offset=2)
+        return conjunction
 
 
 class DCIO(_WDIO):
-    def __init__(self, container, wd_path=os.getcwd()):
-        _WDIO.__init__(self, container, wd_path=wd_path)
+    def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
+        _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
         self._type = "dc"
 
     def fill_for_solution(self):
@@ -741,14 +734,12 @@ class DCIO(_WDIO):
                                    offset=3,
                                    splitmap=[5, 9, 28, 46, 65, 83],
                                    occurence=self.parameters.keeps["niter"].get())
-
         return results
 
-    def read_solution_stats(self, ):
+    def read_solution_stats(self):
         stats = self._read_table(self._get_output_path(),
                                  "   Mean residual for input values",
                                  occurence=self.parameters.keeps["niter"].get())
-
         return stats
 
     def update_from_results(self):
