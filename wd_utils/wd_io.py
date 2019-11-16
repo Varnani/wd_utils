@@ -77,19 +77,32 @@ class _WDIO:
         return star1_spot_lines, star2_spot_lines
 
     @staticmethod
-    def _slice_with_splitmap(string, splitmap):
+    def _slice_with_splitmap(line, splitmap, string=False):
         if splitmap[0] != 0:
             splitmap.insert(0, 0)
-        temp_line = []
+        splitted_line = []
         i = 0
         while i < len(splitmap) - 1:
-            value = string[splitmap[i]:splitmap[i + 1]]
+            value = line[splitmap[i]:splitmap[i + 1]]
             value = value.rstrip(" ")
             value = value.strip(" ")
-            temp_line.append(value)
+            splitted_line.append(_WDIO._tidy_value(value, string=string))
             i = i + 1
 
-        return temp_line
+        return splitted_line
+
+    @staticmethod
+    def _tidy_value(value, string=False):
+        if string:
+            return value
+        else:
+            if "*" in value:
+                return float("nan")
+            else:
+                try:
+                    return float(value.replace("D", "e"))
+                except ValueError:
+                    return value
 
     @staticmethod
     def _tidy_table(table):
@@ -98,11 +111,11 @@ class _WDIO:
         columns = [[] for _ in table[0]]
         for line in table:
             for index, data in enumerate(line):
-                columns[index].append(float(data))
+                columns[index].append(data)
         return columns
 
     @staticmethod
-    def _read_table(source, header, offset=1, occurence=1, splitmap=None, terminator="\n"):
+    def _read_table(source, header, offset=1, occurence=1, splitmap=None, terminator="\n", tidy=True, string=False):
         table = []
         flag = False
         start = 0
@@ -121,20 +134,24 @@ class _WDIO:
                             break
                         else:
                             if splitmap is not None:
-                                table.append(_WDIO._slice_with_splitmap(line, splitmap))
+                                table.append(_WDIO._slice_with_splitmap(line, splitmap, string=string))
                             else:
-                                table.append(line.split())
-        return _WDIO._tidy_table(table)
+                                table.append([_WDIO._tidy_value(x, string=string) for x in line.split()])
+
+        if tidy:
+            return _WDIO._tidy_table(table)
+        else:
+            return table
 
     @staticmethod
-    def _read_all_tables(source, header, offset=1, splitmap=None, terminator=""):
+    def _read_all_tables(source, header, offset=1, splitmap=None, terminator="", tidy=True, string=False):
         with open(source, "r") as src:
             splitted_source = src.read().split(header)
 
         if len(splitted_source) == 1:
             return []
 
-        splitted_source.pop(0)  # we dont care about prior data
+        splitted_source.pop(0)  # we do not care about prior data
         tables = []
 
         for segment in splitted_source:
@@ -149,11 +166,25 @@ class _WDIO:
                     break
                 else:
                     if splitmap is not None:
-                        table.append(_WDIO._slice_with_splitmap(line, splitmap))
+                        table.append(_WDIO._slice_with_splitmap(line, splitmap, string=string))
                     else:
-                        table.append(line.split())
-            tables.append(_WDIO._tidy_table(table))
+                        table.append([_WDIO._tidy_value(x, string=string) for x in line.split()])
+            if tidy:
+                tables.append(_WDIO._tidy_table(table))
+            else:
+                tables.append(table)
         return tables
+
+    def check_container_type(self):
+        expectation = None
+        if self._type == "lc":
+            expectation = "LC"
+        elif self._type == "dc":
+            expectation = "DC"
+
+        if self.parameters.name != expectation:
+            raise TypeError("Expected container: " + expectation + "\n"
+                            "Found container: " + self.parameters.name)
 
     def __str__(self):
         return self._input
@@ -163,6 +194,7 @@ class LCIO(_WDIO):
     def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
         _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
         self._type = "lc"
+        self.check_container_type()
 
     def _fill_input(self, mpage, ktstep=0):
 
@@ -212,7 +244,7 @@ class LCIO(_WDIO):
                 self.parameters["ifat2"].format(2, 0, "") + \
                 self.parameters["n1"].format(4, 0, "") + \
                 self.parameters["n2"].format(4, 0, "") + \
-                self.parameters["perr0"].format(13, 6, "F") + \
+                self.parameters["perr"].format(13, 6, "F") + \
                 self.parameters["dperdt"].format(14, 6, "D") + \
                 self.parameters["the"].format(8, 5, "F") + \
                 self.parameters["vunit"].format(8, 2, "F") + "\n"
@@ -397,6 +429,7 @@ class DCIO(_WDIO):
     def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
         _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
         self._type = "dc"
+        self.check_container_type()
 
     def fill_for_solution(self):
         def _format_keeps(keep):
@@ -639,7 +672,7 @@ class DCIO(_WDIO):
                 self.parameters["n2"].format(4, 0, "") + \
                 self.parameters["n1l"].format(4, 0, "") + \
                 self.parameters["n2l"].format(4, 0, "") + \
-                self.parameters["perr0"].format(13, 6, "F") + \
+                self.parameters["perr"].format(13, 6, "F") + \
                 self.parameters["dperdt"].format(13, 5, "D") + \
                 self.parameters["the"].format(8, 5, "F") + \
                 self.parameters["vunit"].format(9, 3, "F") + "\n"
@@ -741,6 +774,67 @@ class DCIO(_WDIO):
                                  "   Mean residual for input values",
                                  occurence=self.parameters.keeps["niter"].get())
         return stats
+
+    def read_component_dimensions(self):
+        s1_dimensions = self._read_table(self._get_output_path(),
+                                         "  1   pole",
+                                         offset=0,
+                                         splitmap=[3, 10, 24, 38, 52, 66])
+
+        s2_dimensions = self._read_table(self._get_output_path(),
+                                         "  2   pole",
+                                         offset=0,
+                                         splitmap=[3, 10, 24, 38, 52, 66])
+
+        return [s1_dimensions, s2_dimensions]
+
+    def read_unweighted_observations(self, split_by_observation=False):
+        results = self.read_results()
+        column_limit = 20
+        base_columns = 4
+        if self.parameters["jdphs"].get() == 1:
+            column_limit = 23
+            base_columns = 5
+        current_columns = len(results[0]) + base_columns
+
+        if current_columns > column_limit:
+            oc_table = self._read_table(self._get_output_path(), "Unweighted Observational Equations", offset=3,
+                                        tidy=False)
+            table = []
+            idx = 0
+            max_idx = len(oc_table)
+            while idx < max_idx:
+                table.append(oc_table[idx] + oc_table[idx + 1])
+                idx = idx + 2
+            oc_table = self._tidy_table(table)
+
+        else:
+            oc_table = self._read_table(self._get_output_path(), "Unweighted Observational Equations", offset=3)
+
+        if split_by_observation:
+            obs_table = []
+            split_table = []
+            limit = 0
+            if self.parameters.velocity_curves[0] is not None:
+                vc1_len = len(self.parameters.velocity_curves[0].data["velocity_data"][0])
+                split_table.append([limit, limit + vc1_len])
+                limit = limit + vc1_len + 1
+            if self.parameters.velocity_curves[1] is not None:
+                vc2_len = len(self.parameters.velocity_curves[1].data["velocity_data"][0])
+                split_table.append([limit, limit + vc2_len])
+                limit = limit + vc2_len + 1
+            for lc in self.parameters.light_curves:
+                lc_len = len(lc.data["light_data"][0])
+                split_table.append([limit, limit + lc_len])
+                limit = limit + lc_len + 1
+            for split in split_table:
+                temp_table = []
+                for column in oc_table:
+                    temp_table.append(column[split[0]:split[1]])
+                obs_table.append(temp_table)
+            return obs_table
+        else:
+            return oc_table
 
     def update_from_results(self):
         raise NotImplementedError

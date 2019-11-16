@@ -97,7 +97,6 @@ class _ParameterContainer:
 
     def _add_data(self, name, *columns):
         cols = list(columns)
-
         self.data[name] = cols
 
     def check_values(self):
@@ -197,7 +196,7 @@ class _CommonParameterContainer(_ParameterContainer):
         self._add_parameter("phsv", float)
         self._add_parameter("pcsv", float)
         self._add_parameter("rm", float)
-        self._add_parameter("perr0", float)
+        self._add_parameter("perr", float)
         self._add_parameter("dperdt", float)
         self._add_parameter("the", float)
         self._add_parameter("vunit", float)
@@ -673,7 +672,7 @@ class DCParameterContainer(_CommonParameterContainer):
             self["ifvc2"] = 0
             self.velocity_curves[1] = None
 
-    def reset_veloicty_curves(self):
+    def reset_velocity_curves(self):
         self.velocity_curves = [None, None]
         self["ifvc1"] = 0
         self["ifvc2"] = 0
