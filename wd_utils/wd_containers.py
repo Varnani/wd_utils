@@ -268,15 +268,6 @@ class _CommonParameterContainer(_ParameterContainer):
         self.star1_spots = []
         self.star2_spots = []
 
-    def get_temperatures(self):
-
-        tavh_n = self.Parameter("tavh_n", float, self["tavh"].get() / 10000.0)
-        tavc_n = self.Parameter("tavc_n", float, self["tavc"].get() / 10000.0)
-
-        # below assumes dcin formatting
-        # this is actually F7.4, 1X, F7.4 in lcin file but should not matter either way
-        return tavh_n.format(7, 4, "F"), tavc_n.format(8, 4, "F")
-
     def __str__(self):
         output = _ParameterContainer.__str__(self) + "\n\nStar 1 spots:\n"
 

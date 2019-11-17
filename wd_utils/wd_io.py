@@ -1,16 +1,20 @@
-from wd_containers import _ParameterContainer
+from .wd_containers import _ParameterContainer
 import os
-import subprocess32
+import sys
+# below snippet is taken from subprocess32 manual
+if os.name == 'posix' and sys.version_info[0] < 3:
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 
 class _WDIO:
-    def __init__(self, container, wd_path, lc_binary_name, dc_binary_name):
+    def __init__(self, container, wd_path, wd_binary_name):
         self.parameters = container
         self._input = ""
         self._cwd = wd_path
         self._type = ""
-        self._lc_binary_name = lc_binary_name
-        self._dc_binary_name = dc_binary_name
+        self._wd_binary_name = wd_binary_name
 
         # TODO implement error checking for common input errors
         self.warning = ""
@@ -33,14 +37,9 @@ class _WDIO:
         return self
 
     def run(self):
-        cmd = ""
-        if self._type == "lc":
-            cmd = os.path.join(self._cwd, self._lc_binary_name)
-        elif self._type == "dc":
-            cmd = os.path.join(self._cwd, self._dc_binary_name)
-
+        cmd = os.path.join(self._cwd, self._wd_binary_name)
         if os.path.isfile(cmd):
-            proc = subprocess32.Popen(cmd, cwd=self._cwd)
+            proc = subprocess.Popen(cmd, cwd=self._cwd)
             proc.wait()
             return self
         else:
@@ -191,8 +190,8 @@ class _WDIO:
 
 
 class LCIO(_WDIO):
-    def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
-        _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
+    def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC"):
+        _WDIO.__init__(self, container, wd_path=wd_path, wd_binary_name=lc_binary_name)
         self._type = "lc"
         self.check_container_type()
 
@@ -261,9 +260,11 @@ class LCIO(_WDIO):
                 self.parameters["fspot1"].format(10, 4, "F") + \
                 self.parameters["fspot2"].format(10, 4, "F") + "\n"
 
-        tavh, tavc = self.parameters.get_temperatures()
+        tavh_n = _ParameterContainer.Parameter("tavh_n", float, self.parameters["tavh"].get() / 10000.0)
+        tavc_n = _ParameterContainer.Parameter("tavc_n", float, self.parameters["tavc"].get() / 10000.0)
 
-        line6 = tavh + " " + tavc + \
+        line6 = tavh_n.format(7, 4, "F") + " " + \
+                tavc_n.format(7, 4, "F") + \
                 self.parameters["alb1"].format(7, 3, "F") + \
                 self.parameters["alb2"].format(7, 3, "F") + \
                 self.parameters["phsv"].format(13, 6, "D") + \
@@ -426,8 +427,8 @@ class LCIO(_WDIO):
 
 
 class DCIO(_WDIO):
-    def __init__(self, container, wd_path=os.getcwd(), lc_binary_name="LC", dc_binary_name="DC"):
-        _WDIO.__init__(self, container, wd_path=wd_path, lc_binary_name=lc_binary_name, dc_binary_name=dc_binary_name)
+    def __init__(self, container, wd_path=os.getcwd(), dc_binary_name="DC"):
+        _WDIO.__init__(self, container, wd_path=wd_path, wd_binary_name=dc_binary_name)
         self._type = "dc"
         self.check_container_type()
 
@@ -689,9 +690,11 @@ class DCIO(_WDIO):
                  self.parameters["fspot1"].format(10, 4, "F") + \
                  self.parameters["fspot2"].format(10, 4, "F") + "\n"
 
-        tavh, tavc = self.parameters.get_temperatures()
+        tavh_n = _ParameterContainer.Parameter("tavh_n", float, self.parameters["tavh"].get() / 10000.0)
+        tavc_n = _ParameterContainer.Parameter("tavc_n", float, self.parameters["tavc"].get() / 10000.0)
 
-        line11 = tavh + tavc +\
+        line11 = tavh_n.format(7, 4, "F") + \
+                 tavc_n.format(8, 4, "F") + \
                  self.parameters["alb1"].format(7, 3, "F") + \
                  self.parameters["alb2"].format(7, 3, "F") + \
                  self.parameters["phsv"].format(13, 6, "D") + \
@@ -761,12 +764,13 @@ class DCIO(_WDIO):
 
         return self
 
-    def read_results(self):
+    def read_results(self, force_tidy_output=False):
         results = self._read_table(self._get_output_path(),
                                    "Input-Output in D Format",
                                    offset=3,
                                    splitmap=[5, 9, 28, 46, 65, 83],
-                                   occurence=self.parameters.keeps["niter"].get())
+                                   occurence=self.parameters.keeps["niter"].get(),
+                                   tidy=force_tidy_output)
         return results
 
     def read_solution_stats(self):
@@ -837,4 +841,5 @@ class DCIO(_WDIO):
             return oc_table
 
     def update_from_results(self):
+        # TODO implement this
         raise NotImplementedError
