@@ -22,6 +22,8 @@ class _WDIO:
         self.has_warning = False
         self.has_error = False
 
+        self.process = None
+
     def set_working_directory(self, path):
         self._cwd = path
 
@@ -39,8 +41,9 @@ class _WDIO:
     def run(self):
         cmd = os.path.join(self._cwd, self._wd_binary_name)
         if os.path.isfile(cmd):
-            proc = subprocess.Popen(cmd, cwd=self._cwd)
-            proc.wait()
+            self.process = subprocess.Popen(cmd, cwd=self._cwd)
+            self.process.wait()
+            self.process = None
             return self
         else:
             raise IOError("Cannot find WD binary:\n" + cmd)
