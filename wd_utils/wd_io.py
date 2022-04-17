@@ -164,7 +164,7 @@ class _WDIO:
                 current_offset = current_offset + 1
             table = []
             for line in splitted_segment:
-                if not line.strip():
+                if not line.split():
                     break
                 else:
                     if splitmap is not None:
@@ -392,6 +392,11 @@ class LCIO(_WDIO):
                               "      JD               Phase     light 1       light 2")
         return lc
 
+    def read_cgs_synthetic_light_curve(self):
+        lc = self._read_table(self._get_output_path(),
+                              "      JD               Phase       cgs1          cgs2          cgstot")
+        return lc
+
     def read_synthetic_velocity_curve(self):
         vc = self._read_table(self._get_output_path(),
                               "      JD              Phase     V Rad 1")
@@ -427,6 +432,32 @@ class LCIO(_WDIO):
                                        "conj. time   type         wt.",
                                        offset=2)
         return conjunction
+
+    def read_abs_params(self):
+        abs_params = self._read_table(self._get_output_path(),
+                                       " Star         M/Msun   (Mean Radius)/Rsun     M Bol    Log g (cgs)")
+
+        teffs = self._read_table(self._get_output_path(),
+                                       "  T1      T2     Alb 1  Alb 2")
+        sma = self._read_table(self._get_output_path(),
+                                       "  ecc     s-m axis       F1         F2       Vgam")
+        lds = self._read_table(self._get_output_path(),
+                                       "band      x1        x2        y1        y2")
+        lums = self._read_table(self._get_output_path(),
+                                       "band         L1           L2         x1      x2      y1      y2")
+        return abs_params, teffs, sma, lds, lums
+
+    def read_K1_2_params(self):
+        par_set_1 = self._read_table(self._get_output_path(),
+                                       "JDPHS     J.D. zero       P zero           dPdt      Ph. shift")
+        par_set_2 = self._read_table(self._get_output_path(),
+                                       "  ecc     s-m axis       F1         F2       Vgam       Incl")
+        par_set_3 = self._read_table(self._get_output_path(),
+                                       "  T1      T2     Alb 1  Alb 2    Pot 1        Pot 2           M2/M1")
+
+        p, e, a, i, q = float(par_set_1[2][0]), float(par_set_2[0][0]), float(par_set_2[1][0]), \
+                         float(par_set_2[5][0]), float(par_set_3[6][0])
+        return p, e, a, i, q
 
 
 class DCIO(_WDIO):
@@ -734,15 +765,18 @@ class DCIO(_WDIO):
         eclipse_data = ""
         if self.parameters.eclipse_timings is not None:
             eclipse_line = (" " * 82) + \
-                           self.parameters.eclipse_timings["sigma"].format() + \
-                           (" " * 32) + \
-                           self.parameters.eclipse_timings["ksd"].format() + "\n"
+                           self.parameters.eclipse_timings["sigma"].format(10,8,"F") + \
+                           (" " * 34) + \
+                           self.parameters.eclipse_timings["ksd"].format(1,1,"") + "\n"
 
             hjd_formatter = _ParameterContainer.Parameter("hjd", float)
             type_formatter = _ParameterContainer.Parameter("type", int)
             weights_formatter = _ParameterContainer.Parameter("weights", float)
 
-            for xyz in zip(self.parameters.eclipse_timings.data[""]):
+            x, y, z = self.parameters.eclipse_timings.data["eclipse_data"][0], \
+                      self.parameters.eclipse_timings.data["eclipse_data"][1], \
+                      self.parameters.eclipse_timings.data["eclipse_data"][2]
+            for xyz in zip(x,y,z):
                 hjd_formatter.set(xyz[0])
                 type_formatter.set(xyz[1])
                 weights_formatter.set(xyz[2])
@@ -769,7 +803,7 @@ class DCIO(_WDIO):
 
     def read_results(self, force_tidy_output=False):
         results = self._read_table(self._get_output_path(),
-                                   "Input-Output in D Format",
+                                   "Input-Output in F Format",
                                    offset=3,
                                    splitmap=[5, 9, 28, 46, 65, 83],
                                    occurence=self.parameters.keeps["niter"].get(),
@@ -825,15 +859,15 @@ class DCIO(_WDIO):
             if self.parameters.velocity_curves[0] is not None:
                 vc1_len = len(self.parameters.velocity_curves[0].data["velocity_data"][0])
                 split_table.append([limit, limit + vc1_len])
-                limit = limit + vc1_len + 1
+                limit = limit + vc1_len #+ 1
             if self.parameters.velocity_curves[1] is not None:
                 vc2_len = len(self.parameters.velocity_curves[1].data["velocity_data"][0])
                 split_table.append([limit, limit + vc2_len])
-                limit = limit + vc2_len + 1
+                limit = limit + vc2_len #+ 1
             for lc in self.parameters.light_curves:
                 lc_len = len(lc.data["light_data"][0])
                 split_table.append([limit, limit + lc_len])
-                limit = limit + lc_len + 1
+                limit = limit + lc_len #+ 1
             for split in split_table:
                 temp_table = []
                 for column in oc_table:

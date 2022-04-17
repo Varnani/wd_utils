@@ -34,7 +34,7 @@ class _ParameterContainer:
                     return (" " * (width - 3)) + "0.0"
                 elif 1.0 > self._value > -1.0:
                     output = "{:{width}.{precision}g}".format(self._value, width=width, precision=precision)
-                    if "." not in output:
+                    if "." not in output and "e" in output:
                         output = output.split("e")[0].strip(" ") + ".0e" + output.split("e")[1].strip(" ")
                 elif self._value >= 1.0 or self._value <= -1.0:
                     output = "{:{width}.{precision}f}".format(self._value, width=width, precision=precision)
@@ -89,7 +89,7 @@ class _ParameterContainer:
         self._parameter_dict = {}
 
     def _add_parameter(self, name, ftype, value=None):
-        if name not in self._parameter_dict.keys():
+        if name not in list(self._parameter_dict.keys()):
             param = _ParameterContainer.Parameter(name, ftype, value=value)
             self._parameter_dict[name] = param
         else:
@@ -127,7 +127,7 @@ class _ParameterContainer:
 
     def __setitem__(self, key, value):
         if type(key) == str:
-            if key in self._parameter_dict.keys():
+            if key in list(self._parameter_dict.keys()):
                 self._parameter_dict[key].set(value)
             else:
                 raise ValueError(key + " does not exist.")
@@ -135,13 +135,13 @@ class _ParameterContainer:
             raise TypeError("Expected a string, but found " + str(type(key)) + " for key: " + str(key))
 
     def __iter__(self):
-        for parameter in self._parameter_dict.values():
+        for parameter in list(self._parameter_dict.values()):
             yield parameter
 
     def __repr__(self):
         return "<ParameterContainer for " + self.name + \
-               ", parameters: " + str(len(self._parameter_dict.keys())) + \
-               ", data: " + str(len(self.data.keys())) + ">"
+               ", parameters: " + str(len(list(self._parameter_dict.keys()))) + \
+               ", data: " + str(len(list(self.data.keys()))) + ">"
 
     def __str__(self):
         output = "ParameterContainer " + self.name + ":\n"
@@ -157,7 +157,7 @@ class _ParameterContainer:
 
         if len(self.data) != 0:
             output = output + "\nAvailable data:\n"
-            for key in self.data.keys():
+            for key in list(self.data.keys()):
                 output = output + key + ": " + str(len(self.data[key])) + " columns"
         return output
 
@@ -586,7 +586,7 @@ class DCParameterContainer(_CommonParameterContainer):
 
     def add_light_curve(self, iband, hla, cla, x1a, x2a, y1a, y2a, opsfa, sigma,
                         ksd, el3a, noise, aextinc, calib, times, observations, weights,
-                        wla=0.55, xunit=1.000, spha1=0.05, spha2=0.45, spha3=0.55, spha4=0.95, ):
+                        wla, xunit, spha1, spha2, spha3, spha4 ):
 
         lc = _ParameterContainer("LightCurve")
 
@@ -603,7 +603,7 @@ class DCParameterContainer(_CommonParameterContainer):
         lc._add_parameter("sphas2", float, value=spha2)
         lc._add_parameter("sphas3", float, value=spha3)
         lc._add_parameter("sphas4", float, value=spha4)
-        lc._add_parameter("ksd", float, value=ksd)
+        lc._add_parameter("ksd", int, value=ksd)
         lc._add_parameter("wla", float, value=wla)
         lc._add_parameter("el3a", float, value=el3a)
         lc._add_parameter("noise", int, value=noise)
@@ -626,7 +626,7 @@ class DCParameterContainer(_CommonParameterContainer):
 
     def add_velocity_curve(self, star, sigma, ksd, wla, times, observations, weights,
                            iband=7, hla=1, cla=1, x1a=0, x2a=0, y1a=0, y2a=0, opsfa=0,
-                           spha1=0.05, spha2=0.45, spha3=0.55, spha4=0.95):
+                           sphas1=0.05, sphas2=0.45, sphas3=0.55, sphas4=0.95):
 
         vc = _ParameterContainer("VelocityCurve")
 
@@ -639,11 +639,11 @@ class DCParameterContainer(_CommonParameterContainer):
         vc._add_parameter("y2a", float, value=y2a)
         vc._add_parameter("opsfa", float, value=opsfa)
         vc._add_parameter("sigma", float, value=sigma)
-        vc._add_parameter("sphas1", float, value=spha1)
-        vc._add_parameter("sphas2", float, value=spha2)
-        vc._add_parameter("sphas3", float, value=spha3)
-        vc._add_parameter("sphas4", float, value=spha4)
-        vc._add_parameter("ksd", float, value=ksd)
+        vc._add_parameter("sphas1", float, value=sphas1)
+        vc._add_parameter("sphas2", float, value=sphas2)
+        vc._add_parameter("sphas3", float, value=sphas3)
+        vc._add_parameter("sphas4", float, value=sphas4)
+        vc._add_parameter("ksd", int, value=ksd)
         vc._add_parameter("wla", float, value=wla)
 
         vc._add_data("velocity_data", times, observations, weights)
